@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
@@ -21,6 +22,7 @@ import 'package:proxypin/native/vpn.dart';
 import 'package:proxypin/network/bin/configuration.dart';
 import 'package:proxypin/network/bin/server.dart';
 import 'package:proxypin/ui/component/widgets.dart';
+import 'package:proxypin/utils/task.dart';
 
 ///应用白名单 目前只支持安卓 ios没办法获取安装的列表
 ///@author wang
@@ -90,16 +92,12 @@ class _AppWhitelistState extends State<AppWhitelist> {
               icon: const Icon(Icons.add),
               onPressed: () async {
                 if (!context.mounted) return;
-                var value = await Navigator.of(context).push<String>(
+                var info = await Navigator.of(context).push<AppInfo>(
                     MaterialPageRoute(builder: (_) => InstalledAppsWidget(addedList: _apps)));
-                if (value == null || configuration.appWhitelist.contains(value)) return;
-                configuration.appWhitelist.add(value);
+                if (info == null || configuration.appWhitelist.contains(info.packageName)) return;
+                configuration.appWhitelist.add(info.packageName!);
                 changed = true;
-                bool isCN = Localizations.localeOf(context) == const Locale.fromSubtags(languageCode: 'zh');
-                var info = await InstalledApps.getAppInfo(value).catchError((e) =>
-                    AppInfo(name: isCN ? "未知应用" : "Unknown app", packageName: value, inValid: true));
-                if (!mounted) return;
-                setState(() => _apps.add(info));
+                if (mounted) setState(() => _apps.add(info));
               },
             ),
             IconButton(
@@ -245,17 +243,13 @@ class _AppBlacklistState extends State<AppBlacklist> {
             icon: const Icon(Icons.add),
               onPressed: () async {
                 if (!context.mounted) return;
-                var value = await Navigator.of(context).push<String>(
+                var info = await Navigator.of(context).push<AppInfo>(
                     MaterialPageRoute(builder: (_) => InstalledAppsWidget(addedList: _apps)));
-                if (value == null || configuration.appBlacklist?.contains(value) == true) return;
+                if (info == null || configuration.appBlacklist?.contains(info.packageName) == true) return;
                 configuration.appBlacklist ??= [];
-                configuration.appBlacklist!.add(value);
+                configuration.appBlacklist!.add(info.packageName!);
                 changed = true;
-                bool isCN = Localizations.localeOf(context) == const Locale.fromSubtags(languageCode: 'zh');
-                var info = await InstalledApps.getAppInfo(value).catchError((e) =>
-                    AppInfo(name: isCN ? "未知应用" : "Unknown app", packageName: value, inValid: true));
-                if (!mounted) return;
-                setState(() => _apps.add(info));
+                if (mounted) setState(() => _apps.add(info));
               },
           ),
           IconButton(
@@ -333,8 +327,9 @@ class InstalledAppsWidget extends StatefulWidget {
 }
 
 class _InstalledAppsWidgetState extends State<InstalledAppsWidget> {
-  List<AppInfo>? apps;
-  bool includeSystemApps = false;
+  static List<AppInfo>? apps;
+  static bool includeSystemApps = false;
+  static final Map<String, Future<AppInfo>> _iconFutureCache = {};
 
   RxBool loading = false.obs;
 
@@ -344,6 +339,16 @@ class _InstalledAppsWidgetState extends State<InstalledAppsWidget> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => refreshApps());
+  }
+
+  @override
+  void dispose() {
+    DelayedTask().debounce("InstalledAppsWidget_release", const Duration(seconds: 60), () {
+      apps = null;
+      includeSystemApps = false;
+      _iconFutureCache.clear();
+    });
+    super.dispose();
   }
 
   void refreshApps() async {
@@ -419,17 +424,51 @@ class _InstalledAppsWidgetState extends State<InstalledAppsWidget> {
             title: Text(appInfo.name ?? ""),
             subtitle: Text(appInfo.packageName ?? ""),
             onTap: () async {
-              Navigator.of(context).pop(appInfo.packageName);
+              var info = await InstalledApps.getAppInfo(appInfo.packageName!)
+                  .timeout(const Duration(seconds: 5))
+                  .catchError((_) => appInfo);
+              if (context.mounted) Navigator.of(context).pop(info);
             },
           );
         });
   }
 
   Widget _buildAppIcon(AppInfo appInfo) {
-    var icon = appInfo.icon;
+    final icon = appInfo.icon;
     if (icon != null && icon.isNotEmpty) {
       return Image.memory(icon, width: 24, height: 24, cacheWidth: 72, cacheHeight: 72);
     }
-    return const Icon(Icons.question_mark);
+
+    final packageName = appInfo.packageName;
+    if (packageName == null || packageName.isEmpty) {
+      return const Icon(Icons.question_mark);
+    }
+
+    final future = _iconFutureCache.putIfAbsent(
+      packageName,
+      () => InstalledApps.getAppInfo(packageName),
+    );
+
+    return FutureBuilder<AppInfo>(
+      future: future,
+      builder: (BuildContext context, AsyncSnapshot<AppInfo> snapshot) {
+        final loadedIcon = snapshot.data?.icon;
+        if (loadedIcon != null && loadedIcon.isNotEmpty) {
+          return Image.memory(loadedIcon, width: 24, height: 24, cacheWidth: 72, cacheHeight: 72);
+        }
+
+        if (snapshot.hasError) {
+          return const Icon(Icons.question_mark);
+        }
+
+        return const SizedBox(
+          width: 24,
+          height: 24,
+          child: Center(
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        );
+      },
+    );
   }
 }
