@@ -266,26 +266,13 @@ class HistoryTask extends ListenerListEvent<HttpRequest> {
   }
 
   @override
-  void onRemove(HttpRequest item) => resetList();
+  void onRemove(HttpRequest item) => writeList.remove(item);
 
   @override
-  void onBatchRemove(List<HttpRequest> items) => resetList();
+  void onBatchRemove(List<HttpRequest> items) => writeList.clear();
 
   @override
-  void clear(List<HttpRequest> items) => resetList();
-
-  Future<void> resetList() async {
-    locked = true;
-    await open?.lock().timeout(Duration(seconds: 3), onTimeout: () => open!.unlock());
-    open = await open?.truncate(0);
-    await open?.setPosition(0);
-    history?.requestLength = 0;
-    history?.requests = null;
-    writeList.clear();
-    writeList.addAll(sourceList.source);
-    locked = false;
-    open?.unlock();
-  }
+  void clear(List<HttpRequest> items) => writeList.clear();
 
   void cancelTask() {
     timer?.cancel();
