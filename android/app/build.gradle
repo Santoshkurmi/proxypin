@@ -61,7 +61,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.network.proxy"
+        applicationId "com.network.proxy2"
         ndk { abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64' }
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdkVersion flutter.minSdkVersion
@@ -73,16 +73,15 @@ android {
 
     signingConfigs {
         release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-            storePassword keystoreProperties['storePassword']
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeFile file('debug.jks')
+            storePassword 'android'
         }
     }
 
     buildTypes {
         release {
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.release
 
             minifyEnabled true
@@ -90,7 +89,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         debug {
-            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
