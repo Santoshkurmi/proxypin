@@ -30,13 +30,16 @@ import 'package:proxypin/utils/desktop_support.dart';
 import 'package:proxypin/utils/navigator.dart';
 import 'package:proxypin/utils/platform.dart';
 import 'package:window_manager/window_manager.dart';
-
+import 'package:refresh_rate/refresh_rate.dart';
 import 'l10n/app_localizations.dart';
 
 ///主入口
 ///@author wanghongen
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  if(Platform.isAndroid){
+    RefreshRate.enable();
+  }
   await RustLib.init();
 
   final windowController = Platforms.isDesktop() ? await DesktopMultiWindow.ensureInitialized() : null;

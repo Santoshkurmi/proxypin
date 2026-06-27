@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_desktop_context_menu
   flutter_js
   proxy_manager
+  refresh_rate
   screen_retriever_linux
   tray_manager
   url_launcher_linux

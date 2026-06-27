@@ -11,6 +11,7 @@ import file_picker
 import flutter_desktop_context_menu
 import flutter_js
 import proxy_manager
+import refresh_rate
 import screen_retriever_macos
 import share_plus
 import shared_preferences_foundation
@@ -26,6 +27,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FlutterDesktopContextMenuPlugin.register(with: registry.registrar(forPlugin: "FlutterDesktopContextMenuPlugin"))
   FlutterJsPlugin.register(with: registry.registrar(forPlugin: "FlutterJsPlugin"))
   ProxyManagerPlugin.register(with: registry.registrar(forPlugin: "ProxyManagerPlugin"))
+  RefreshRatePlugin.register(with: registry.registrar(forPlugin: "RefreshRatePlugin"))
   ScreenRetrieverMacosPlugin.register(with: registry.registrar(forPlugin: "ScreenRetrieverMacosPlugin"))
   SharePlusMacosPlugin.register(with: registry.registrar(forPlugin: "SharePlusMacosPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))

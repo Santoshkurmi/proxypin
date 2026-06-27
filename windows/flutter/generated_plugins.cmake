@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_js
   permission_handler_windows
   proxy_manager
+  refresh_rate
   screen_retriever_windows
   share_plus
   tray_manager
