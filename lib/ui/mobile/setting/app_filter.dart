@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import 'dart:typed_data';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:proxypin/l10n/app_localizations.dart';
@@ -52,18 +53,26 @@ class _AppWhitelistState extends State<AppWhitelist> {
 
   Future<void> _loadApps() async {
     bool isCN = Localizations.localeOf(context) == const Locale.fromSubtags(languageCode: 'zh');
+    var unknown = isCN ? "未知应用" : "Unknown app";
 
-    var futures = <Future<AppInfo>>[];
-    for (var pkg in configuration.appWhitelist) {
-      futures.add(InstalledApps.getAppInfo(pkg)
-          .timeout(const Duration(seconds: 10))
-          .catchError((e) =>
-              AppInfo(name: isCN ? "未知应用" : "Unknown app", packageName: pkg, inValid: true)));
-    }
-
-    for (var f in futures) {
-      _apps.add(await f);
-      if (mounted) setState(() {});
+    if (Platform.isAndroid) {
+      var results = await InstalledApps.getAppInfoBatch(configuration.appWhitelist);
+      for (var info in results) {
+        if (info.name == null || info.name!.isEmpty) {
+          info.name = unknown;
+          info.inValid = true;
+        }
+        _apps.add(info);
+        if (mounted) setState(() {});
+      }
+    } else {
+      for (var pkg in configuration.appWhitelist) {
+        var info = await InstalledApps.getAppInfo(pkg)
+            .timeout(const Duration(seconds: 10))
+            .catchError((_) => AppInfo(name: unknown, packageName: pkg, inValid: true));
+        _apps.add(info);
+        if (mounted) setState(() {});
+      }
     }
 
     if (mounted) setState(() => _loaded = true);
@@ -203,18 +212,27 @@ class _AppBlacklistState extends State<AppBlacklist> {
 
   Future<void> _loadApps() async {
     bool isCN = Localizations.localeOf(context) == const Locale.fromSubtags(languageCode: 'zh');
+    var unknown = isCN ? "未知应用" : "Unknown app";
 
-    var futures = <Future<AppInfo>>[];
-    for (var pkg in (configuration.appBlacklist ?? [])) {
-      futures.add(InstalledApps.getAppInfo(pkg)
-          .timeout(const Duration(seconds: 10))
-          .catchError((e) =>
-              AppInfo(name: isCN ? "未知应用" : "Unknown app", packageName: pkg, inValid: true)));
-    }
-
-    for (var f in futures) {
-      _apps.add(await f);
-      if (mounted) setState(() {});
+    var packages = configuration.appBlacklist ?? [];
+    if (Platform.isAndroid) {
+      var results = await InstalledApps.getAppInfoBatch(packages);
+      for (var info in results) {
+        if (info.name == null || info.name!.isEmpty) {
+          info.name = unknown;
+          info.inValid = true;
+        }
+        _apps.add(info);
+        if (mounted) setState(() {});
+      }
+    } else {
+      for (var pkg in packages) {
+        var info = await InstalledApps.getAppInfo(pkg)
+            .timeout(const Duration(seconds: 10))
+            .catchError((_) => AppInfo(name: unknown, packageName: pkg, inValid: true));
+        _apps.add(info);
+        if (mounted) setState(() {});
+      }
     }
 
     if (mounted) setState(() => _loaded = true);

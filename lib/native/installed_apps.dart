@@ -19,6 +19,12 @@ class InstalledApps {
     return _methodChannel
         .invokeMethod<Map>('getAppInfo', {"packageName": packageName}).then((value) => AppInfo.formJson(value!));
   }
+
+  static Future<List<AppInfo>> getAppInfoBatch(List<String> packages) async {
+    return _methodChannel
+        .invokeListMethod<Map>('getAppInfoBatch', {"packages": packages})
+        .then((value) => value?.map((e) => AppInfo.formJson(e)).toList() ?? []);
+  }
 }
 
 class AppInfo {

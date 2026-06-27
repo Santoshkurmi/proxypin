@@ -42,7 +42,16 @@ class InstalledAppsPlugin : AndroidFlutterPlugin() {
 
                 "getAppInfo" -> {
                     val packageName = call.argument<String>("packageName") ?: ""
-                    result.success(getAppInfo(packageName))
+                    Thread {
+                        result.success(getAppInfo(packageName))
+                    }.start()
+                }
+
+                "getAppInfoBatch" -> {
+                    val packages = call.argument<List<String>>("packages") ?: emptyList()
+                    Thread {
+                        result.success(getAppInfoBatch(packages))
+                    }.start()
                 }
 
                 else -> result.notImplemented()
@@ -55,6 +64,25 @@ class InstalledAppsPlugin : AndroidFlutterPlugin() {
         packageManager.getApplicationInfo(packageName, 0).let { app ->
             return ProcessInfo.create(packageManager, app, true)
         }
+    }
+
+    private fun getAppInfoBatch(packages: List<String>): List<ProcessInfo> {
+        val pm = activity.packageManager
+        val pool = Executors.newFixedThreadPool(3)
+        val futures = packages.map { pkg ->
+            pool.submit(Callable {
+                try {
+                    val app = pm.getApplicationInfo(pkg, 0)
+                    ProcessInfo.create(pm, app, true)
+                } catch (_: Exception) {
+                    ProcessInfo("", pkg, ByteArray(0), null)
+                }
+            })
+        }
+        val results = futures.map { it.get() }
+        pool.shutdown()
+        pool.awaitTermination(5, TimeUnit.SECONDS)
+        return results
     }
 
     private fun isSystemApp(applicationInfo: ApplicationInfo?): Boolean {
