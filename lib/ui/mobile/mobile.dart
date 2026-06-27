@@ -224,6 +224,11 @@ class MobileHomeState extends State<MobileHomePage> implements EventListener, Li
             return;
           }
 
+          if (_selectIndex.value != 0) {
+            _selectIndex.value = 0;
+            return;
+          }
+
           if (await enterPictureInPicture()) {
             return;
           }
